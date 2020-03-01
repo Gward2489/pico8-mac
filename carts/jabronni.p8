@@ -53,6 +53,8 @@ function _init()
         game_state = "retry"
         manage_high_score(score)
         music(-1, 300)
+        camera_x = 0
+        camera_y = 0
         frame_count = 0
         seconds = 0
         combo = 0
@@ -60,6 +62,8 @@ function _init()
         hits_this_level = 0
         current_jam_level = 1
         gobs = {}
+        gobs_in = {}
+        gobs_out = {}
         good_hit_row_one = false
         good_hit_row_one_timer = 0
         bad_hit_row_one = false
@@ -114,12 +118,33 @@ function _init()
     end
 
     function draw_title()
-        print("goblin hunter: dj edition", 14, 35, 12)
-        print("only the goblin hunter", 20, 45, 8)
-        print("has the beats", 30, 55, 8)
-        print("to soothe the", 30, 65, 8)
-        print("angry goblin soul", 25, 75, 8)
-        print("press z or x to begin", 22, 85, 9)
+        print("goblin hunter: dj edition", 15, 7, 14)
+
+        spr(192, 10, 25,2, 2, false, false)
+        print("up", 30, 30, 7)
+
+        spr(194, 10, 45,2, 2, false, false)
+        print("right", 30, 50, 7)
+
+
+        spr(192, 10, 65,2, 2, false, true)
+        print("down", 30, 70, 7)
+
+        spr(194, 10, 85,2, 2, true, false)
+        print("left", 30, 90, 7)
+
+        spr(196, 58, 25,2, 2)
+        print("button 1 (z)", 77, 30, 7)
+
+        spr(198, 58, 45,2, 2)
+        print("button 2 (x)", 77, 50, 7)
+
+        spr(14, 80, 78, 2,2, true, false)
+        spr(144, 60, 80, 4, 3, true, false)
+        spr(133, 64, 75, 2, 2)
+        spr(133, 73, 82, 2, 2)
+
+        print("press z or x to begin", 23, 115, 9)
     end
 
     function draw_retry()
@@ -421,8 +446,11 @@ function _init()
     end
 
 
-    gob_count = 25
+    gob_count = 10
     gobs = {}
+    gobs_in = {}
+    gobs_out = {}
+
 
     -- 1 is green, 2 pink
     gob_colors = {
@@ -471,7 +499,7 @@ function _init()
     }
 
 
-    other_gobs = 20
+    other_gobs = 5
 
     function create_gobs()
         for i = 1, gob_count do
@@ -483,7 +511,10 @@ function _init()
                 sprite_state = 1,
                 flipped = false,
                 w = 1,
-                h = 1 
+                h = 1,
+                v = 1.2,
+                tx = 0,
+                ty = 0 
             })
         end
 
@@ -497,10 +528,123 @@ function _init()
                 sprite_state = 1,
                 flipped = false,
                 w = 1,
-                h = 1 
+                h = 1,
+                v = 1.2,
+                tx = 0,
+                ty = 0 
             })
 
         end
+    end
+
+
+    function manage_gobs_in()
+        for gob in all(gobs_in) do
+            if frame_count % 5 == 0 then
+                gob.x = gob.x - gob.v
+            end
+            if gob.x <= gob.tx then
+                add(gobs, gob)
+                del(gobs_in, gob)
+            end
+        end
+        manage_gobs_in_state()
+    end
+
+    function manage_gobs_out()
+        for gob in all(gobs_out) do
+            if frame_count % 5 == 0 then
+                gob.x = gob.x + gob.v
+            end
+            if gob.x >= gob.tx then
+                del(gobs_del, gob)
+            end
+        end
+        manage_gobs_out_state()
+    end
+
+    function add_new_gobs(gob_number)
+
+        for i = 1, 3 do
+
+            add(gobs_in, {
+                x = flr(rnd(90)) + 100,
+                y = flr(rnd(10)) + 78,
+                c = flr(rnd(2)) + 1,
+                state = "rage",
+                sprite_state = 1,
+                flipped = false,
+                w = 1,
+                h = 1,
+                v = 1.2,
+                tx = flr(rnd(90)) + 30,
+                ty = flr(rnd(10)) + 78 
+            })
+
+        end
+
+        for i = 1, 5 do
+
+            add(gobs_in, {
+                x = flr(rnd(40)) + 120,
+                y = flr(rnd(70)) + 10,
+                c = flr(rnd(2)) + 1,
+                state = "rage",
+                sprite_state = 1,
+                flipped = false,
+                w = 1,
+                h = 1,
+                v = 1.2,
+                tx = flr(rnd(40)) + 85,
+                ty = flr(rnd(70)) + 10 
+            })
+
+        end
+
+    end
+
+    function remove_gobs(gob_number)
+
+        local gob_indexes = {}
+
+        for i = 1, 8 do
+            local value_is_unique = false
+
+            while not value_is_unique do
+                local rnd_gob = get_random_gob_index()
+
+                if #gob_indexes < 1 then
+                    add(gob_indexes, rnd_gob)
+                    value_is_unique = true
+                else
+                    local found_match = false
+                    for i in all(gob_indexes) do
+                        if gob_indexes[i] == rnd_gob then
+                            found_match = true
+                        end
+                    end
+
+                    if not found_match then
+                        value_is_unique = true
+                        add(gob_indexes, rnd_gob)
+                    end
+                end
+            end
+        end
+
+        for i in all(gob_indexes) do
+
+            if gobs[i] != nil then
+                gobs[i].tx = gobs[i].x + 120
+                gobs[i].state = "basic"
+                add(gobs_out, gobs[i])
+                del(gobs, gobs[i])
+            end
+        end
+    end
+
+    function get_random_gob_index()
+        return flr(rnd(#gobs)) + 1
     end
 
     function manage_gob(gob, anim, random, rate)
@@ -518,6 +662,30 @@ function _init()
             else
                 gob.sprite_state = gob.sprite_state + 1
             end
+        end
+    end
+
+    function draw_gobs_in()
+        for gob in all(gobs_in) do
+                if gob.c == 1 then
+                    spr(gob_rage_1[gob.sprite_state], gob.x, gob.y, gob.w, gob.h, gob.flipped)
+
+                else
+                    spr(gob_rage_2[gob.sprite_state], gob.x, gob.y, gob.w, gob.h, gob.flipped)
+
+                end
+        end
+    end
+
+
+
+    function draw_gobs_out()
+        for gob in all(gobs_out) do
+                if gob.c == 1 then
+                    spr(gob_basic_1[gob.sprite_state], gob.x, gob.y, gob.w, gob.h, gob.flipped)
+                else
+                    spr(gob_basic_2[gob.sprite_state], gob.x, gob.y, gob.w, gob.h, gob.flipped)
+                end
         end
     end
 
@@ -557,6 +725,26 @@ function _init()
             else
                 gob_state_buffer = false
                 gob_state_buffer_timer = 0
+            end
+        end
+    end
+
+    function manage_gobs_in_state()
+        for gob in all(gobs_in) do
+            if gob.c == 1 then
+                manage_gob(gob, gob_rage_1, false, 5)
+            else
+                manage_gob(gob, gob_rage_2, false, 5)
+            end
+        end
+    end
+
+    function manage_gobs_out_state()
+        for gob in all(gobs_out) do
+            if gob.c == 1 then
+                manage_gob(gob, gob_basic_1, false, 10)
+            else
+                manage_gob(gob, gob_basic_2, false, 10)
             end
         end
     end
@@ -1169,29 +1357,6 @@ function _init()
 
     -- music -- 
 
-    -- music_playing = false
-    -- score_at_last_change = 0
-
-
-    -- function manage_music()
-
-    --     if music_playing == false then
-    --         music(0)
- 
-    --         score_at_last_change = score
-    --         music_playing = true
-    --     end
-
-    --     if (score - score_at_last_change) > 100 then
-
-    --         music(-1, 300)    
-
-    --         music(2)
-    --         score_at_last_change = score
-    --     end
-
-    -- end
-
     songs = {
         0,
         6,
@@ -1201,7 +1366,7 @@ function _init()
 
     function update_song(level) 
         music(-1, 300)
-        music(songs[level], 300, 10)
+        music(songs[level], 0, 10)
     end
 
     good_sfx = {34,35,36}
@@ -1328,6 +1493,8 @@ function _init()
             update_song(current_jam_level)
         end
 
+        add_new_gobs()
+
     end
 
     function jam_level_down()
@@ -1342,6 +1509,9 @@ function _init()
             current_jam_level = current_jam_level - 1
             update_song(current_jam_level)
         end
+
+        remove_gobs()
+
     end
 
     function manage_jam_level_transition()
@@ -1431,6 +1601,8 @@ function _update60()
         manage_dj_by_state()
         manage_gob_state()
         manage_gobs_by_state()
+        manage_gobs_in()
+        manage_gobs_out()
 
         if jam_level_transition then
             manage_jam_level_transition()
@@ -1467,6 +1639,8 @@ function _draw()
         draw_dj_hunter_by_state()
         draw_turntables()
         draw_gobs_by_state()
+        draw_gobs_in()
+        draw_gobs_out()
         draw_hit_tray()
         draw_level_display()
         draw_target_one()
